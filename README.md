@@ -1,72 +1,399 @@
-Programming the Internet of Things (PIoT) – Gateway and Cloud Device Applications
-Overview
+# Lab Module 02: System Performance Monitoring
 
-This repository contains two core components of the Programming the Internet of Things (PIoT) project:
+## Overview
 
-1. Gateway Device Application (GDA) – Java
-   Runs on the local gateway device to monitor system performance, collect telemetry, and manage IoT devices locally.
+Lab Module 02 adds system performance monitoring capabilities to both the Gateway Device App (GDA) and Constrained Device App (CDA). These applications now continuously collect and log CPU and memory utilization metrics at regular intervals.
 
-2. Cloud Device Application (CDA) – Python
-   Runs in the cloud to receive telemetry from gateways, store data, and provide remote management and analytics capabilities.
+## Objectives
 
-This design allows seamless integration between local monitoring and cloud-based data processing.
-Features
-GDA – Gateway Device Application (Java)
-- Collects local system performance data:
-  - CPU Utilization (SystemCpuUtilTask)
-  - Memory Usage (SystemMemUtilTask)
-- Sends telemetry to listeners via IDataMessageListener (console or network integration possible)
-- Configurable via properties file (default: PiotConfig.props)
-- Supports command-line arguments for custom configurations
-- Modular: can extend with additional system metrics or IoT tasks
-CDA – Cloud Device Application (Python)
-- Receives telemetry from multiple GDA instances
-- Stores or processes telemetry for analytics and dashboards
-- Provides a flexible framework for cloud-side IoT processing
-- Easily integrated with databases, MQTT brokers, or REST APIs
+- Build system performance monitoring into the GDA (Java) and CDA (Python)
+- Collect CPU utilization metrics from the host system
+- Collect memory utilization metrics from the host system
+- Schedule telemetry collection at configurable intervals
+- Log performance data for monitoring and analysis
 
-Project Structure
-piot
-├── gda-java-components      # Java-based Gateway Device App
-│   ├── src/main/java/programmingtheiot/gda/app
-│   │   ├── GatewayDeviceApp.java
-│   │   └── ConsoleTelemetryListener.java
-│   ├── src/main/java/programmingtheiot/gda/system
-│   │   ├── SystemPerformanceManager.java
-│   │   ├── SystemCpuUtilTask.java
-│   │   └── SystemMemUtilTask.java
-│   └── src/main/java/programmingtheiot/common
-│       ├── ConfigConst.java
-│       ├── ConfigUtil.java
-│       └── IDataMessageListener.java
-├── cda-python-components    # Python-based Cloud Device App
-│   ├── cloud_device_app.py
-│   └── cloud_telemetry_manager.py
-├── docs                     # Diagram images
-│   ├── gda_class_diagram.png
-│   └── telemetry_sequence_diagram.png
-├── pom.xml                  # Java project build file
-└── README.md
+## Implementation Details
 
+### Gateway Device App (GDA) - Java
 
-How it Works
+**Components Implemented:**
 
-GDA Workflow (Java)
-1. Startup: GatewayDeviceApp initializes configuration and SystemPerformanceManager. Command-line arguments can specify custom config files.
-2. Monitoring: SystemPerformanceManager starts SystemCpuUtilTask and SystemMemUtilTask. Each task collects telemetry periodically and sends data to IDataMessageListener.
-3. Telemetry: ConsoleTelemetryListener prints data to the console. Custom listeners can forward data to the CDA via MQTT, HTTP, or other protocols.
-4. Shutdown: After the configured runtime, GDA stops all tasks cleanly.
-CDA Workflow (Python)
-1. Startup: cloud_device_app.py initializes CloudTelemetryManager.
-2. Telemetry Handling: CloudTelemetryManager receives telemetry from GDA instances, stores it, and optionally processes it for analytics.
-Diagrams
-Class Diagram (GDA): See docs/gda_class_diagram.png
-Sequence Diagram – Telemetry Flow (GDA → CDA): See docs/telemetry_sequence_diagram.png
-Build & Run Instructions
-GDA (Java)
+1. **SystemPerformanceManager** (`programmingtheiot.gda.system.SystemPerformanceManager`)
+   - Manages scheduled telemetry collection
+   - Uses `ScheduledExecutorService` for task scheduling
+   - Configurable poll rate from configuration file
+   - Starts and stops performance monitoring tasks
+
+2. **BaseSystemUtilTask** (`programmingtheiot.gda.system.BaseSystemUtilTask`)
+   - Abstract base class for system utilization tasks
+   - Defines template method pattern for telemetry collection
+   - Provides common functionality for task name and type ID
+
+3. **SystemCpuUtilTask** (`programmingtheiot.gda.system.SystemCpuUtilTask`)
+   - Extends `BaseSystemUtilTask`
+   - Collects CPU utilization using `ManagementFactory.getOperatingSystemMXBean()`
+   - Returns system load average as a float value
+
+4. **SystemMemUtilTask** (`programmingtheiot.gda.system.SystemMemUtilTask`)
+   - Extends `BaseSystemUtilTask`
+   - Collects JVM heap memory utilization using `ManagementFactory.getMemoryMXBean()`
+   - Calculates and returns memory usage percentage
+
+5. **GatewayDeviceApp** (`programmingtheiot.gda.app.GatewayDeviceApp`)
+   - Modified to integrate `SystemPerformanceManager`
+   - Starts performance monitoring on app startup
+   - Stops performance monitoring on app shutdown
+   - Fixed `System.exit()` to only terminate on error conditions
+
+**Key Technologies:**
+- Java 17
+- Java Management Extensions (JMX)
+- ScheduledExecutorService for task scheduling
+- Maven for build management
+
+### Constrained Device App (CDA) - Python
+
+**Components Implemented:**
+
+1. **SystemPerformanceManager** (`programmingtheiot.cda.system.SystemPerformanceManager`)
+   - Manages scheduled telemetry collection
+   - Uses APScheduler's `BackgroundScheduler` for task scheduling
+   - Configurable poll rate from configuration file
+   - Starts and stops performance monitoring tasks
+
+2. **BaseSystemUtilTask** (`programmingtheiot.cda.system.BaseSystemUtilTask`)
+   - Base class for system utilization tasks
+   - Defines template method pattern for telemetry collection
+   - Provides common functionality for task name and type ID
+
+3. **SystemCpuUtilTask** (`programmingtheiot.cda.system.SystemCpuUtilTask`)
+   - Extends `BaseSystemUtilTask`
+   - Collects CPU utilization using `psutil.cpu_percent()`
+   - Returns CPU usage percentage as a float value
+
+4. **SystemMemUtilTask** (`programmingtheiot.cda.system.SystemMemUtilTask`)
+   - Extends `BaseSystemUtilTask`
+   - Collects memory utilization using `psutil.virtual_memory().percent`
+   - Returns memory usage percentage as a float value
+
+5. **ConstrainedDeviceApp** (`programmingtheiot.cda.app.ConstrainedDeviceApp`)
+   - Modified to integrate `SystemPerformanceManager`
+   - Starts performance monitoring on app startup
+   - Stops performance monitoring on app shutdown
+
+**Key Technologies:**
+- Python 3.12.3
+- psutil library for system metrics
+- APScheduler for task scheduling
+- pytest for testing
+
+## Architecture
+
+### CDA Class Diagram
+
+The following diagram shows the class structure and relationships in the CDA system performance monitoring implementation:
+```mermaid
+classDiagram
+    %% Constrained Device App (CDA) - Python Architecture
+    
+    class ConstrainedDeviceApp {
+        -SystemPerformanceManager sysPerfMgr
+        -bool isStarted
+        +__init__()
+        +bool isAppStarted()
+        +void startApp()
+        +void stopApp(int code)
+    }
+
+    class SystemPerformanceManager {
+        -int pollRate
+        -str locationID
+        -IDataMessageListener dataMsgListener
+        -BackgroundScheduler scheduler
+        -SystemCpuUtilTask cpuUtilTask
+        -SystemMemUtilTask memUtilTask
+        +__init__()
+        +void handleTelemetry()
+        +void startManager()
+        +void stopManager()
+        +void setDataMessageListener(listener)
+    }
+
+    class BaseSystemUtilTask {
+        #str name
+        #int typeID
+        +__init__(str name, int typeID)
+        +str getName()
+        +int getTypeID()
+        +float getTelemetryValue()
+    }
+
+    class SystemCpuUtilTask {
+        +__init__()
+        +float getTelemetryValue()
+    }
+
+    class SystemMemUtilTask {
+        +__init__()
+        +float getTelemetryValue()
+    }
+
+    class ConfigUtil {
+        <<singleton>>
+        +__init__(str configFile)
+        +getInstance() ConfigUtil
+        +getInteger(str section, str key, int defaultVal) int
+        +getProperty(str section, str key, str defaultVal) str
+        +getBoolean(str section, str key) bool
+    }
+
+    class ConfigConst {
+        <<module>>
+        +DEFAULT_POLL_CYCLES: int
+        +POLL_CYCLES_KEY: str
+        +CONSTRAINED_DEVICE: str
+        +DEVICE_LOCATION_ID_KEY: str
+        +CPU_UTIL_NAME: str
+        +MEM_UTIL_NAME: str
+        +CPU_UTIL_TYPE: int
+        +MEM_UTIL_TYPE: int
+        +RUN_FOREVER_KEY: str
+    }
+
+    class BackgroundScheduler {
+        <<APScheduler>>
+        +add_job(func, trigger, seconds)
+        +start()
+        +shutdown()
+    }
+
+    class psutil {
+        <<library>>
+        +cpu_percent() float
+        +virtual_memory() MemoryInfo
+    }
+
+    ConstrainedDeviceApp *-- SystemPerformanceManager : contains
+    SystemPerformanceManager *-- SystemCpuUtilTask : contains
+    SystemPerformanceManager *-- SystemMemUtilTask : contains
+    SystemCpuUtilTask --|> BaseSystemUtilTask : extends
+    SystemMemUtilTask --|> BaseSystemUtilTask : extends
+    
+    ConstrainedDeviceApp ..> ConfigUtil : uses
+    SystemPerformanceManager ..> ConfigUtil : uses
+    ConstrainedDeviceApp ..> ConfigConst : uses
+    SystemPerformanceManager ..> ConfigConst : uses
+    BaseSystemUtilTask ..> ConfigConst : uses
+    
+    SystemPerformanceManager ..> BackgroundScheduler : uses
+    SystemCpuUtilTask ..> psutil : uses
+    SystemMemUtilTask ..> psutil : uses
+
+    note for ConstrainedDeviceApp "Main application entry point\n- Initializes system components\n- Manages application lifecycle\n- Supports command line arguments"
+    
+    note for SystemPerformanceManager "Coordinates system monitoring\n- Uses APScheduler BackgroundScheduler\n- Polls at configurable intervals\n- Collects CPU and memory telemetry"
+    
+    note for BaseSystemUtilTask "Base class using\nTemplate Method pattern\n- Defines common task structure\n- Subclasses implement getTelemetryValue()"
+    
+    note for SystemCpuUtilTask "Collects CPU utilization\nusing psutil.cpu_percent()"
+    
+    note for SystemMemUtilTask "Collects memory utilization\nusing psutil.virtual_memory().percent"
+
+## Architecture
+
+Both applications read the poll rate from their respective configuration files:
+
+**GDA:** `config/PiotConfig.props`
+**CDA:** `config/PiotConfig.props`
+
+Configuration parameters:
+- `pollCycles`: Number of seconds between telemetry collections (default: varies by configuration)
+
+## Testing
+
+### GDA Tests
+
+**Unit Tests:**
+```bash
+mvn test -Dtest=ConfigUtilDefaultTest
+mvn test -Dtest=ConfigUtilCustomTest
+mvn test -Dtest=SystemCpuUtilTaskTest
+mvn test -Dtest=SystemMemUtilTaskTest
+```
+
+classDiagram
+    %% Gateway Device App (GDA) - Java Architecture
+    
+    class GatewayDeviceApp {
+        -Logger _Logger
+        -String configFile
+        -SystemPerformanceManager sysPerfMgr
+        +GatewayDeviceApp()
+        +GatewayDeviceApp(String[] args)
+        +void startApp()
+        +void stopApp(int code)
+        +static void main(String[] args)
+        -static Map~String,String~ parseArgs(String[] args)
+    }
+
+    class SystemPerformanceManager {
+        -Logger _Logger
+        -int pollRate
+        -ScheduledExecutorService schedExecSvc
+        -SystemCpuUtilTask sysCpuUtilTask
+        -SystemMemUtilTask sysMemUtilTask
+        -Runnable taskRunner
+        -boolean isStarted
+        +SystemPerformanceManager()
+        +void handleTelemetry()
+        +boolean startManager()
+        +boolean stopManager()
+        +void setDataMessageListener(IDataMessageListener)
+    }
+
+    class BaseSystemUtilTask {
+        <<abstract>>
+        -Logger _Logger
+        #String name
+        #int typeID
+        +BaseSystemUtilTask(String name, int typeID)
+        +String getName()
+        +int getTypeID()
+        +float getTelemetryValue()*
+    }
+
+    class SystemCpuUtilTask {
+        -Logger _Logger
+        +SystemCpuUtilTask()
+        +float getTelemetryValue()
+    }
+
+    class SystemMemUtilTask {
+        -Logger _Logger
+        +SystemMemUtilTask()
+        +float getTelemetryValue()
+    }
+
+    class ConfigUtil {
+        <<singleton>>
+        +getInstance() ConfigUtil
+        +getInteger(String section, String key, int defaultVal) int
+        +getProperty(String section, String key, String defaultVal) String
+    }
+
+    class ConfigConst {
+        <<interface>>
+        +DEFAULT_POLL_CYCLES int
+        +POLL_CYCLES_KEY String
+        +GATEWAY_DEVICE String
+        +CPU_UTIL_NAME String
+        +MEM_UTIL_NAME String
+        +DEFAULT_TYPE_ID int
+    }
+
+    %% Relationships
+    GatewayDeviceApp *-- SystemPerformanceManager : contains
+    SystemPerformanceManager *-- SystemCpuUtilTask : contains
+    SystemPerformanceManager *-- SystemMemUtilTask : contains
+    SystemCpuUtilTask --|> BaseSystemUtilTask : extends
+    SystemMemUtilTask --|> BaseSystemUtilTask : extends
+    
+    GatewayDeviceApp ..> ConfigUtil : uses
+    SystemPerformanceManager ..> ConfigUtil : uses
+    GatewayDeviceApp ..> ConfigConst : uses
+    SystemPerformanceManager ..> ConfigConst : uses
+    BaseSystemUtilTask ..> ConfigConst : uses
+
+    %% Notes
+    note for GatewayDeviceApp "Main application entry point\n- Initializes system components\n- Manages application lifecycle\n- Parses command line arguments"
+    
+    note for SystemPerformanceManager "Coordinates system monitoring\n- Uses ScheduledExecutorService\n- Polls at configurable intervals\n- Collects CPU and memory telemetry"
+    
+    note for BaseSystemUtilTask "Abstract base class using\nTemplate Method pattern\n- Defines common task structure\n- Subclasses implement getTelemetryValue()"
+    
+    note for SystemCpuUtilTask "Collects CPU utilization\nusing ManagementFactory\ngetSystemLoadAverage()"
+    
+    note for SystemMemUtilTask "Collects JVM memory utilization\nusing ManagementFactory\ngetHeapMemoryUsage()"
+
+## Configuration
+
+**Integration Tests:**
+```bash
+mvn test -Dtest=GatewayDeviceAppTest
+mvn test -Dtest=SystemPerformanceManagerTest
+```
+
+### CDA Tests
+
+Activate virtual environment first:
+```bash
+source venv/bin/activate
+```
+
+**Unit Tests:**
+```bash
+python3 -m pytest tests/unit/system/test_SystemCpuUtilTask.py -v
+python3 -m pytest tests/unit/system/test_SystemMemUtilTask.py -v
+```
+
+**Integration Tests:**
+```bash
+python3 -m pytest tests/integration/system/test_SystemPerformanceManager.py -v
+python3 -m pytest tests/integration/app/test_ConstrainedDeviceApp.py -v
+```
+
+## Test Results
+
+**GDA:**
+- ConfigUtilDefaultTest: ✓ Passed (6 tests)
+- ConfigUtilCustomTest: ✓ Passed (7 tests)
+- SystemCpuUtilTaskTest: ✓ Passed
+- SystemMemUtilTaskTest: ✓ Passed
+- SystemPerformanceManagerTest: ✓ Passed (60s runtime)
+- GatewayDeviceAppTest: ✓ Passed (65s runtime)
+
+**CDA:**
+- test_SystemCpuUtilTask: ✓ Passed (0.03s)
+- test_SystemMemUtilTask: ✓ Passed (0.03s)
+- test_SystemPerformanceManager: ✓ Passed (60s runtime)
+- test_ConstrainedDeviceApp: ✓ Passed (0.08s)
+
+## Running the Applications
+
+### GDA
+```bash
 cd gda-java-components
-mvn clean install
+mvn compile
 mvn exec:java -Dexec.mainClass="programmingtheiot.gda.app.GatewayDeviceApp"
-CDA (Python)
+```
+
+### CDA
+```bash
 cd cda-python-components
-python cloud_device_app.py
+source venv/bin/activate
+python3 -m programmingtheiot.cda.app.ConstrainedDeviceApp
+```
+
+## Design Patterns Used
+
+1. **Template Method Pattern:** `BaseSystemUtilTask` defines the structure, subclasses implement specific telemetry collection
+2. **Manager Pattern:** `SystemPerformanceManager` coordinates multiple tasks
+3. **Dependency Injection:** Configuration is injected via `ConfigUtil`
+
+## Future Enhancements
+
+Potential improvements for future lab modules:
+- Add disk utilization monitoring
+- Add network utilization monitoring
+- Implement data persistence for telemetry
+- Add alerting thresholds for critical resource usage
+- Implement data visualization dashboards
+
+## References
+
+- Programming the Internet of Things by Andrew D. King (O'Reilly Media)
+- Lab exercise tasks: https://github.com/programming-the-iot/book-exercise-tasks/issues/202
+
+## Author
+
+Donald Chinonso Irebo- October 2025
