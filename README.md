@@ -94,8 +94,6 @@ Lab Module 02 adds system performance monitoring capabilities to both the Gatewa
 The following diagram shows the class structure and relationships in the CDA system performance monitoring implementation:
 ```mermaid
 classDiagram
-    %% Constrained Device App (CDA) - Python Architecture
-    
     class ConstrainedDeviceApp {
         -SystemPerformanceManager sysPerfMgr
         -bool isStarted
@@ -189,132 +187,11 @@ classDiagram
     SystemCpuUtilTask ..> psutil : uses
     SystemMemUtilTask ..> psutil : uses
 
-    note for ConstrainedDeviceApp "Main application entry point\n- Initializes system components\n- Manages application lifecycle\n- Supports command line arguments"
-    
-    note for SystemPerformanceManager "Coordinates system monitoring\n- Uses APScheduler BackgroundScheduler\n- Polls at configurable intervals\n- Collects CPU and memory telemetry"
-    
-    note for BaseSystemUtilTask "Base class using\nTemplate Method pattern\n- Defines common task structure\n- Subclasses implement getTelemetryValue()"
-    
-    note for SystemCpuUtilTask "Collects CPU utilization\nusing psutil.cpu_percent()"
-    
-    note for SystemMemUtilTask "Collects memory utilization\nusing psutil.virtual_memory().percent"
-
-## Architecture
-
-Both applications read the poll rate from their respective configuration files:
-
-**GDA:** `config/PiotConfig.props`
-**CDA:** `config/PiotConfig.props`
-
-Configuration parameters:
-- `pollCycles`: Number of seconds between telemetry collections (default: varies by configuration)
-
-## Testing
-
-### GDA Tests
-
-**Unit Tests:**
-```bash
-mvn test -Dtest=ConfigUtilDefaultTest
-mvn test -Dtest=ConfigUtilCustomTest
-mvn test -Dtest=SystemCpuUtilTaskTest
-mvn test -Dtest=SystemMemUtilTaskTest
-```
-
-classDiagram
-    %% Gateway Device App (GDA) - Java Architecture
-    
-    class GatewayDeviceApp {
-        -Logger _Logger
-        -String configFile
-        -SystemPerformanceManager sysPerfMgr
-        +GatewayDeviceApp()
-        +GatewayDeviceApp(String[] args)
-        +void startApp()
-        +void stopApp(int code)
-        +static void main(String[] args)
-        -static Map~String,String~ parseArgs(String[] args)
-    }
-
-    class SystemPerformanceManager {
-        -Logger _Logger
-        -int pollRate
-        -ScheduledExecutorService schedExecSvc
-        -SystemCpuUtilTask sysCpuUtilTask
-        -SystemMemUtilTask sysMemUtilTask
-        -Runnable taskRunner
-        -boolean isStarted
-        +SystemPerformanceManager()
-        +void handleTelemetry()
-        +boolean startManager()
-        +boolean stopManager()
-        +void setDataMessageListener(IDataMessageListener)
-    }
-
-    class BaseSystemUtilTask {
-        <<abstract>>
-        -Logger _Logger
-        #String name
-        #int typeID
-        +BaseSystemUtilTask(String name, int typeID)
-        +String getName()
-        +int getTypeID()
-        +float getTelemetryValue()*
-    }
-
-    class SystemCpuUtilTask {
-        -Logger _Logger
-        +SystemCpuUtilTask()
-        +float getTelemetryValue()
-    }
-
-    class SystemMemUtilTask {
-        -Logger _Logger
-        +SystemMemUtilTask()
-        +float getTelemetryValue()
-    }
-
-    class ConfigUtil {
-        <<singleton>>
-        +getInstance() ConfigUtil
-        +getInteger(String section, String key, int defaultVal) int
-        +getProperty(String section, String key, String defaultVal) String
-    }
-
-    class ConfigConst {
-        <<interface>>
-        +DEFAULT_POLL_CYCLES int
-        +POLL_CYCLES_KEY String
-        +GATEWAY_DEVICE String
-        +CPU_UTIL_NAME String
-        +MEM_UTIL_NAME String
-        +DEFAULT_TYPE_ID int
-    }
-
-    %% Relationships
-    GatewayDeviceApp *-- SystemPerformanceManager : contains
-    SystemPerformanceManager *-- SystemCpuUtilTask : contains
-    SystemPerformanceManager *-- SystemMemUtilTask : contains
-    SystemCpuUtilTask --|> BaseSystemUtilTask : extends
-    SystemMemUtilTask --|> BaseSystemUtilTask : extends
-    
-    GatewayDeviceApp ..> ConfigUtil : uses
-    SystemPerformanceManager ..> ConfigUtil : uses
-    GatewayDeviceApp ..> ConfigConst : uses
-    SystemPerformanceManager ..> ConfigConst : uses
-    BaseSystemUtilTask ..> ConfigConst : uses
-
-    %% Notes
-    note for GatewayDeviceApp "Main application entry point\n- Initializes system components\n- Manages application lifecycle\n- Parses command line arguments"
-    
-    note for SystemPerformanceManager "Coordinates system monitoring\n- Uses ScheduledExecutorService\n- Polls at configurable intervals\n- Collects CPU and memory telemetry"
-    
-    note for BaseSystemUtilTask "Abstract base class using\nTemplate Method pattern\n- Defines common task structure\n- Subclasses implement getTelemetryValue()"
-    
-    note for SystemCpuUtilTask "Collects CPU utilization\nusing ManagementFactory\ngetSystemLoadAverage()"
-    
-    note for SystemMemUtilTask "Collects JVM memory utilization\nusing ManagementFactory\ngetHeapMemoryUsage()"
-
+    note for ConstrainedDeviceApp "Main application entry point"
+    note for SystemPerformanceManager "Coordinates system monitoring using APScheduler"
+    note for BaseSystemUtilTask "Base class using Template Method pattern"
+    note for SystemCpuUtilTask "Collects CPU utilization using psutil"
+    note for SystemMemUtilTask "Collects memory utilization using psutil"
 ## Configuration
 
 **Integration Tests:**
