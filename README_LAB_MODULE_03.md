@@ -2,7 +2,139 @@
 
 ## Overview
 
-Lab Module 03 implements a comprehensive data simulation system for the Constrained Device Application (CDA). This module introduces simulated sensor data generation, actuator command processing, and automated threshold-based actuation responses.
+Lab Module 03 implements a comprehensive data simulation system for the Constrained Device Application (CDA). This module introduces simulated sensor data generation, actuator command processing, and automated threshold-based actuation responses. 
+This document also contains the test results and outputs for Lab Module 03 data simulation implementation in the CDA Python application.
+
+# Constrained Device App (CDA) - Lab Module 03 Test Results
+
+
+## Test Environment
+
+- **Python Version:** 3.12.3
+- **Virtual Environment:** Active (venv)
+- **Testing Framework:** pytest / Python unittest
+- **IDE:** Eclipse with PyDev
+- **OS:** Linux (Ubuntu)
+- **Timezone:** America/Toronto
+- **Date:** October 6, 2025
+
+## Tests Executed
+
+### Data Container Tests
+
+#### 1. test_BaseIotData.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 3/3
+- **Duration:** 0.002 seconds
+
+#### 2. test_SensorData.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 3/3
+- **Duration:** 0.003 seconds
+- **Sample Output:** `name=SensorDataFooBar,typeID=0,timeStamp=2025-10-06T22:43:17+00:00,locationID=constraineddevice001`
+
+#### 3. test_ActuatorData.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 3/3
+- **Duration:** 0.003 seconds
+- **Sample Output:** `name=ActuatorDataFooBar,typeID=0,timeStamp=2025-10-06T22:47:25+00:00,locationID=constraineddevice001`
+
+#### 4. test_SystemPerformanceData.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 3/3
+- **Duration:** 0.002 seconds
+- **Type ID:** 9000
+
+### Sensor Simulation Tests
+
+#### 5. test_TemperatureSensorSimTask.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 2/2
+- **Duration:** 0.003 seconds
+- **Type ID:** 1013
+- **Simulated Value:** 20.579921°C
+
+#### 6. test_HumiditySensorSimTask.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 2/2
+- **Duration:** 0.005 seconds
+- **Type ID:** 1010
+- **Simulated Value:** 35.986133%
+
+#### 7. test_PressureSensorSimTask.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 2/2
+- **Duration:** 0.003 seconds
+- **Type ID:** 1012
+- **Simulated Value:** 1007.562388 hPa
+
+### Actuator Simulation Tests
+
+#### 8. test_HumidifierActuatorSimTask.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 2/2 (1 skipped)
+- **Duration:** 0.003 seconds
+- **Type ID:** 1002
+- **Commands:** ON (18.2, 21.4), OFF
+
+#### 9. test_HvacActuatorSimTask.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 2/2 (1 skipped)
+- **Duration:** 0.007 seconds
+- **Type ID:** 1001
+- **Commands:** ON (18.2°C, 21.4°C), OFF
+
+### Integration Tests
+
+#### 10. test_SensorAdapterManager.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 1/1
+- **Duration:** 60.041 seconds
+- **Collections:** 12 cycles every 5 seconds
+- **Sensor Types:** Temperature (1013), Humidity (1010), Pressure (1012)
+- **Data Points:** 1440 time-series points per sensor
+
+#### 11. test_ActuatorAdapterManager.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 2/2
+- **Duration:** 0.005 seconds
+- **Actuators:** Humidifier (50.0), HVAC (22.5°C)
+
+#### 12. test_SensorEmulatorManager.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 1/1
+- **Duration:** 60.017 seconds
+- **Mode:** SenseHAT emulator mode
+- **Collections:** 12 cycles
+
+#### 13. test_ActuatorEmulatorManager.py
+- **Status:** OK (PASSED)
+- **Tests Run:** 3/3
+- **Duration:** 0.004 seconds
+- **Mode:** SenseHAT emulator mode
+
+## Summary
+
+**Total Tests:** 27/27 passed (100% success rate)
+**Total Duration:** ~120 seconds
+**Data Points Generated:** 1440 per sensor type
+**Collection Interval:** 5 seconds
+
+## Running Tests
+```bash
+# All data tests
+python3 -m pytest tests/unit/data/ -v
+
+# All sensor tests
+python3 -m pytest tests/unit/sim/test_*Sensor*.py -v
+
+# All actuator tests
+python3 -m pytest tests/unit/sim/test_*Actuator*.py -v
+
+# Integration tests
+python3 -m pytest tests/integration/system/test_SensorAdapterManager.py -v
+python3 -m pytest tests/integration/system/test_ActuatorAdapterManager.py -v
+python3 -m pytest tests/integration/emulated/ -v
 
 ## Architecture
 
