@@ -1,13 +1,111 @@
 # Lab Module 03: Data Simulation - README
 
-## Overview
+## Description
 
-Lab Module 03 implements a comprehensive data simulation system for the Constrained Device Application (CDA). This module introduces simulated sensor data generation, actuator command processing, and automated threshold-based actuation responses. 
-This document also contains the test results and outputs for Lab Module 03 data simulation implementation in the CDA Python application.
+This implementation adds data simulation to the Constrained Device App (CDA), enabling realistic sensor data generation for temperature, humidity, and pressure monitoring, along with actuator emulation for HVAC and humidifier control. The SensorAdapterManager coordinates three simulated sensors using the SensorDataGenerator with 1440 time-series data points, while the ActuatorAdapterManager processes commands to control simulated devices. Data containers (SensorData and ActuatorData) encapsulate telemetry and commands with timestamps and location metadata, establishing a complete sensor-to-actuator workflow for intelligent IoT device behavior.
 
-# Constrained Device App (CDA) - Lab Module 03 Test Results
+The implementation uses NumPy arrays to generate realistic time-series data with configurable noise and temporal patterns. The SensorAdapterManager schedules handleTelemetry() via APScheduler, which calls generateTelemetry() on each sensor task (TemperatureSensorSimTask, HumiditySensorSimTask, PressureSensorSimTask) to retrieve data points and create SensorData objects. These tasks inherit from BaseSensorSimTask following the Template Method pattern. The ActuatorAdapterManager routes ActuatorData commands through sendActuatorCommand() to the appropriate actuator task (HvacActuatorSimTask or HumidifierActuatorSimTask), which extends BaseActuatorSimTask and displays simulated ON/OFF states with visual indicators. The ConstrainedDeviceApp integrates both managers, enabling coordinated sensor-actuator control without physical hardware.
 
+### Code Repository Branch
+https://github.com/donald4u/cda-python-components/tree/labmodule03
 
+### UML Design Diagram
+```mermaid
+classDiagram
+    class ConstrainedDeviceApp {
+        -SensorAdapterManager sensorManager
+        -ActuatorAdapterManager actuatorManager
+        +startApp() void
+        +stopApp(int code) void
+    }
+
+    class SensorAdapterManager {
+        -TemperatureSensorSimTask tempSensor
+        -HumiditySensorSimTask humiditySensor
+        -PressureSensorSimTask pressureSensor
+        -BackgroundScheduler scheduler
+        +startManager() bool
+        +stopManager() bool
+        +handleTelemetry() void
+    }
+
+    class ActuatorAdapterManager {
+        -HvacActuatorSimTask hvacActuator
+        -HumidifierActuatorSimTask humidifier
+        +sendActuatorCommand(ActuatorData) bool
+        +handleActuatorCommand(ActuatorData) bool
+    }
+
+    class BaseSensorSimTask {
+        <<abstract>>
+        #String name
+        #int typeID
+        +generateTelemetry() SensorData
+    }
+
+    class BaseActuatorSimTask {
+        <<abstract>>
+        #String name
+        #int typeID
+        +updateActuator(ActuatorData) ActuatorData
+    }
+
+    class TemperatureSensorSimTask {
+        +generateTelemetry() SensorData
+    }
+
+    class HumiditySensorSimTask {
+        +generateTelemetry() SensorData
+    }
+
+    class PressureSensorSimTask {
+        +generateTelemetry() SensorData
+    }
+
+    class HvacActuatorSimTask {
+        +updateActuator(ActuatorData) ActuatorData
+    }
+
+    class HumidifierActuatorSimTask {
+        +updateActuator(ActuatorData) ActuatorData
+    }
+
+    class SensorData {
+        +String name
+        +int typeID
+        +float value
+        +DateTime timeStamp
+        +String locationID
+    }
+
+    class ActuatorData {
+        +String name
+        +int typeID
+        +int command
+        +float value
+        +DateTime timeStamp
+    }
+
+    ConstrainedDeviceApp *-- SensorAdapterManager : contains
+    ConstrainedDeviceApp *-- ActuatorAdapterManager : contains
+    
+    SensorAdapterManager *-- TemperatureSensorSimTask : contains
+    SensorAdapterManager *-- HumiditySensorSimTask : contains
+    SensorAdapterManager *-- PressureSensorSimTask : contains
+    
+    ActuatorAdapterManager *-- HvacActuatorSimTask : contains
+    ActuatorAdapterManager *-- HumidifierActuatorSimTask : contains
+    
+    TemperatureSensorSimTask --|> BaseSensorSimTask : extends
+    HumiditySensorSimTask --|> BaseSensorSimTask : extends
+    PressureSensorSimTask --|> BaseSensorSimTask : extends
+    
+    HvacActuatorSimTask --|> BaseActuatorSimTask : extends
+    HumidifierActuatorSimTask --|> BaseActuatorSimTask : extends
+    
+    SensorAdapterManager ..> SensorData : creates
+    ActuatorAdapterManager ..> ActuatorData : uses
+```
 ## Test Environment
 
 - **Python Version:** 3.12.3
