@@ -1,16 +1,10 @@
-# Gateway Device App (GDA) - Lab Module 02 Test Results
+# Gateway Device Application (Connected Devices)
 
 ## Overview
 
-Lab Module 02 adds system performance monitoring capabilities to both the Gateway Device App (GDA) and Constrained Device App (CDA). These applications now continuously collect and log CPU and memory utilization metrics at regular intervals. This document contains the test results and outputs for Lab Module 02 system performance monitoring implementation in the GDA Java application. - Build system performance monitoring into the GDA (Java) and CDA (Python)
+This implementation adds comprehensive system performance monitoring capabilities to the Gateway Device App (GDA), enabling continuous real-time tracking of CPU and memory utilization on the host system. The implementation creates a hierarchical architecture where the SystemPerformanceManager orchestrates scheduled telemetry collection through two specialized monitoring tasks: SystemCpuUtilTask for CPU load average tracking and SystemMemUtilTask for JVM heap memory utilization. These components work together to collect performance metrics at configurable intervals (default 5 seconds), logging vital system health data that provides insights into the gateway device's operational status and resource consumption patterns. The modular design allows the GDA to monitor its own performance footprint while maintaining minimal overhead, ensuring the monitoring system itself doesn't significantly impact the metrics being collected.
 
-## Objectives
-
-- Build system performance monitoring into the GDA (Java) and CDA (Python)
-- Collect CPU utilization metrics from the host system
-- Collect memory utilization metrics from the host system
-- Schedule telemetry collection at configurable intervals
-- Log performance data for monitoring and analysis
+The implementation leverages Java's Management Extensions (JMX) through the ManagementFactory API to access low-level system metrics without requiring external dependencies or native code. The SystemPerformanceManager initializes a ScheduledExecutorService thread pool that executes the handleTelemetry() method at fixed intervals configured through the PiotConfig.props file. When invoked, this method calls getTelemetryValue() on both the SystemCpuUtilTask (which retrieves system load average via getOperatingSystemMXBean()) and SystemMemUtilTask (which calculates heap memory percentage using getMemoryMXBean()). Both task classes extend the abstract BaseSystemUtilTask, implementing the Template Method design pattern where the base class defines the common structure (name, typeID, getters) while subclasses provide specific metric collection logic. The GatewayDeviceApp integrates this functionality by instantiating the SystemPerformanceManager in its constructor and calling startManager() during application startup and stopManager() during shutdown, ensuring clean lifecycle management with proper resource cleanup and thread termination.
 
 ## Test Environment
 
@@ -19,6 +13,50 @@ Lab Module 02 adds system performance monitoring capabilities to both the Gatewa
 - **IDE:** Eclipse with JUnit 4
 - **OS:** Linux (Ubuntu)
 - **Date:** October 6, 2025
+
+## Code Repository and Branch
+- https://github.com/donald4u/gda-java-components/tree/labmodule02
+
+## Class Diagram
+```mermaid
+classDiagram
+    class GatewayDeviceApp {
+        -SystemPerformanceManager sysPerfMgr
+        +startApp()
+        +stopApp(int code)
+    }
+
+    class SystemPerformanceManager {
+        -SystemCpuUtilTask cpuTask
+        -SystemMemUtilTask memTask
+        +startManager()
+        +stopManager()
+        +handleTelemetry()
+    }
+
+    class BaseSystemUtilTask {
+        <<abstract>>
+        +getTelemetryValue()*
+    }
+
+    class SystemCpuUtilTask {
+        +getTelemetryValue()
+    }
+
+    class SystemMemUtilTask {
+        +getTelemetryValue()
+    }
+
+    GatewayDeviceApp --> SystemPerformanceManager
+    SystemPerformanceManager --> SystemCpuUtilTask
+    SystemPerformanceManager --> SystemMemUtilTask
+    SystemCpuUtilTask --|> BaseSystemUtilTask
+    SystemMemUtilTask --|> BaseSystemUtilTask
+
+    note for GatewayDeviceApp "Main App"
+    note for SystemPerformanceManager "Manages monitoring"
+    note for BaseSystemUtilTask "Base class"
+```
 
 ## Tests Executed
 
