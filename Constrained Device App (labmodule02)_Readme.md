@@ -1,8 +1,10 @@
-# Constrained Device App (CDA) - Lab Module 02 Test Results
+# Constrained Device Application (Connected Devices)
 
-## Overview
+## Description
 
-This document contains the test results and outputs for Lab Module 02 system performance monitoring implementation in the CDA Python application.
+This implementation adds system performance monitoring to the Constrained Device App (CDA), continuously collecting CPU and memory utilization metrics from the host device. The SystemPerformanceManager coordinates two monitoring tasks—SystemCpuUtilTask and SystemMemUtilTask—that collect telemetry at configurable intervals (default 5 seconds). This enables real-time tracking of the device's resource consumption, which is critical for edge IoT devices operating under resource constraints to prevent performance degradation or system failures.
+
+The implementation uses Python's psutil library to access system metrics and APScheduler's BackgroundScheduler for scheduled execution. The SystemPerformanceManager reads the poll rate from PiotConfig.props, initializes both telemetry tasks, and schedules handleTelemetry() as a recurring job. When triggered, this method calls getTelemetryValue() on each task—SystemCpuUtilTask uses psutil.cpu_percent() for CPU usage and SystemMemUtilTask uses psutil.virtual_memory().percent for memory utilization. Both tasks inherit from BaseSystemUtilTask following the Template Method pattern, where the base class defines common structure and subclasses implement specific metric collection. The ConstrainedDeviceApp integrates this by calling startManager() during startup to activate the scheduler and stopManager() during shutdown for clean resource cleanup.
 
 ## Test Environment
 
@@ -13,7 +15,48 @@ This document contains the test results and outputs for Lab Module 02 system per
 - **OS:** Linux (Ubuntu)
 - **Timezone:** America/Toronto
 - **Date:** October 6, 2025
+### Code Repository Branch
+https://github.com/donald4u/cda-python-components/tree/labmodule02
+  
+## Class Diagram
+```mermaid
+classDiagram
+    class ConstrainedDeviceApp {
+        -SystemPerformanceManager sysPerfMgr
+        +startApp()
+        +stopApp(int code)
+    }
 
+    class SystemPerformanceManager {
+        -SystemCpuUtilTask cpuTask
+        -SystemMemUtilTask memTask
+        +startManager()
+        +stopManager()
+        +handleTelemetry()
+    }
+
+    class BaseSystemUtilTask {
+        +getTelemetryValue()
+    }
+
+    class SystemCpuUtilTask {
+        +getTelemetryValue()
+    }
+
+    class SystemMemUtilTask {
+        +getTelemetryValue()
+    }
+
+    ConstrainedDeviceApp --> SystemPerformanceManager
+    SystemPerformanceManager --> SystemCpuUtilTask
+    SystemPerformanceManager --> SystemMemUtilTask
+    SystemCpuUtilTask --|> BaseSystemUtilTask
+    SystemMemUtilTask --|> BaseSystemUtilTask
+
+    note for ConstrainedDeviceApp "Main App"
+    note for SystemPerformanceManager "Manages monitoring"
+    note for BaseSystemUtilTask "Base class"
+```
 ## Tests Executed
 
 ### 1. test_SystemPerformanceManager.py
