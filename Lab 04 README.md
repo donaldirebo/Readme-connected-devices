@@ -1,8 +1,9 @@
 # CDA Lab Module 04 - Test Results
 
 ## Overview
-
-Lab Module 04 implements data emulation using the Sense HAT Emulator for real-time sensor data collection and LED display control.
+Lab Module 04 implements data emulation using the Sense HAT Emulator, enabling real-time sensor data collection and LED display control through a virtual hardware interface.
+## Code Repository and Branch
+- https://github.com/donald4u/cda-python-components/tree/labmodule04
 
 ## Environment
 
