@@ -1,6 +1,9 @@
 # CDA Lab Module 04 - Test Results
 
 ## Overview
+
+Lab Module 04 connects your Python code to the Sense HAT Emulator GUI by creating sensor tasks that read live temperature, humidity, and pressure values directly from the emulator's sliders using SenseHAT(emulate=True).environ properties, and actuator tasks that control the 8x8 LED display using show_message() and clear() methods. Unlike Lab 03's pre-generated data, Lab 04 reads real-time values from an interactive virtual hardware interface, enabling you to adjust sensor values with GUI sliders and see LED responses instantly.
+
 Lab Module 04 implements data emulation using the Sense HAT Emulator, enabling real-time sensor data collection and LED display control through a virtual hardware interface.
 ## Code Repository and Branch
 - https://github.com/donald4u/cda-python-components/tree/labmodule04
@@ -106,79 +109,3 @@ Actuator Emulator Tests:
 Total: 6 tests, all passed, ~105 seconds total runtime
 Key Achievement: Successfully integrated with Sense HAT Emulator GUI, reading live sensor data and controlling LED display.
 
-## Sample Outputs
-
-**Temperature Sensor:**
-```
-TEMPERATURE READ FROM EMULATOR: 34.96875°C
-TEMPERATURE READ FROM EMULATOR: 35.03125°C
-```
-
-**Humidity Sensor:**
-```
-SensorData: 45.507812 - name=HumiditySensor,typeID=1010
-SensorData: 45.292969 - name=HumiditySensor,typeID=1010
-```
-
-**Pressure Sensor:**
-```
-SensorData: 983.599609 - name=PressureSensor,typeID=1012
-SensorData: 983.607422 - name=PressureSensor,typeID=1012
-```
-
-**LED Display:**
-```
-LED MESSAGE: Hello, world!
-LED MESSAGE: Welcome to Connected Devices!
-LED DISPLAY CLEARED
-```
-
-## Implementation
-
-**Sensor Reading:**
-```python
-self.sh = SenseHAT(emulate=True)
-sensorVal = self.sh.environ.temperature  # or humidity, pressure
-```
-
-**LED Control:**
-```python
-from sense_emu import SenseHat
-self.sh.show_message(msg, scroll_speed=0.05, text_colour=[255, 0, 0])
-self.sh.clear()
-```
-
-## Setup
-
-**Create Python 3.10 environment:**
-```bash
-python3.10 -m venv venv-py310
-source venv-py310/bin/activate
-pip install -r requirements.txt
-```
-
-**Install system dependencies:**
-```bash
-sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config
-```
-
-**Run emulator:**
-```bash
-sense_emu_gui &
-```
-
-## Running Tests
-
-```bash
-source venv-py310/bin/activate
-python -m pytest tests/integration/emulated/test_*EmulatorTask.py -v
-```
-
-## References
-
-- Lab Module 04: PIOT-CDA-04-001 through PIOT-CDA-04-005
-- Repository: github.com/donald4u/cda-python-components
-
-## Author
-
-Donald - October 2025
