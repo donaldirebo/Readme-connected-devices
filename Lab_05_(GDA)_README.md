@@ -9,7 +9,7 @@ Lab Module 05 implements JSON-based data serialization and deserialization for t
 The DataUtil singleton class uses Google's Gson library to serialize Java objects (SensorData, ActuatorData, SystemPerformanceData) to formatted JSON strings via `gson.toJson()` and deserialize JSON back to Java objects via `gson.fromJson()`. This enables the GDA to exchange data with the Python-based CDA and other systems using a common JSON format that both languages understand.
 
 ## Code Repository and Branch
-- https://github.com/donald4u/gda-java-components/tree/labmodule05
+- https://github.com/donald4u/cda-python-components/tree/labmodule05
 
 ## Environment
 
