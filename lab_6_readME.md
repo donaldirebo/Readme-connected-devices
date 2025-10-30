@@ -1,23 +1,27 @@
-# Lab Module 06 - MQTT Client (CDA)
+# Lab Module 06 - MQTT Client Implementation for CDA
 
 ## Overview
 
-Lab Module 06 implements MQTT (Message Queuing Telemetry Transport) client functionality for the Constrained Device Application (CDA). This enables the CDA to communicate with an MQTT broker for publishing sensor/performance data and subscribing to actuator commands.
+Lab Module 06 focuses on building robust publish/subscribe (pub/sub) data communications capability into the Constrained Device Application (CDA) using MQTT (Message Queuing Telemetry Transport) protocol. This module implements an MQTT client abstraction layer that enables the CDA to publish messages to an MQTT broker and receive updates through topic-level subscriptions.
+
+---
 
 ## Objectives
 
-- Implement MqttClientConnector using the paho-mqtt library
-- Handle MQTT connection, disconnection, and network events
-- Implement publish and subscribe functionality with QoS validation
-- Integrate MQTT client into DeviceDataManager
-- Enable pub/sub messaging between CDA and GDA via MQTT broker
+- Implement a complete MQTT client connector for the CDA
+- Enable bidirectional communication between CDA and MQTT broker
+- Integrate MQTT functionality into the DeviceDataManager
+- Validate pub/sub messaging with comprehensive integration tests
+- Prepare for future CDA-GDA communication via MQTT
 
+---
 ## Code Repository and Branch
-https://github.com/donald4u/cda-python-components/tree/labmodule06
-
+- https://github.com/donaldirebo/cda-python-components/tree/labmodule06
+---
 ## Class Diagram
 ```mermaid
 classDiagram
+    %% Interfaces
     class IPubSubClient {
         <<interface>>
         +connectClient() bool
@@ -30,96 +34,85 @@ classDiagram
 
     class IDataMessageListener {
         <<interface>>
-        +handleActuatorCommandMessage(data) ActuatorData
+        +handleIncomingMessage(resourceEnum, msg) bool
         +handleActuatorCommandResponse(data) bool
-        +handleIncomingMessage(resource, msg) bool
+        +handleActuatorCommandMessage(data) ActuatorData
         +handleSensorMessage(data) bool
         +handleSystemPerformanceMessage(data) bool
     }
 
+    %% Main MQTT Client Implementation
     class MqttClientConnector {
         -config: ConfigUtil
         -dataMsgListener: IDataMessageListener
+        -mqttClient: Client
         -host: str
         -port: int
         -keepAlive: int
         -defaultQos: int
-        -mc: paho.mqtt.Client
+        -clientID: str
         +__init__(clientID)
         +connectClient() bool
         +disconnectClient() bool
+        +publishMessage(resource, msg, qos) bool
+        +subscribeToTopic(resource, callback, qos) bool
+        +unsubscribeFromTopic(resource) bool
+        +setDataMessageListener(listener) bool
         +onConnect(client, userdata, flags, rc)
         +onDisconnect(client, userdata, rc)
         +onMessage(client, userdata, msg)
         +onPublish(client, userdata, mid)
         +onSubscribe(client, userdata, mid, granted_qos)
-        +onActuatorCommandMessage(client, userdata, msg)
-        +publishMessage(resource, msg, qos) bool
-        +subscribeToTopic(resource, callback, qos) bool
-        +unsubscribeFromTopic(resource) bool
-        +setDataMessageListener(listener) bool
     }
 
+    %% Device Data Manager
     class DeviceDataManager {
         -configUtil: ConfigUtil
-        -enableMqttClient: bool
-        -enableSystemPerf: bool
-        -enableSensing: bool
-        -enableActuation: bool
         -mqttClient: MqttClientConnector
         -sysPerfMgr: SystemPerformanceManager
         -sensorAdapterMgr: SensorAdapterManager
         -actuatorAdapterMgr: ActuatorAdapterManager
+        -enableMqttClient: bool
         -actuatorResponseCache: dict
         -sensorDataCache: dict
         -systemPerformanceDataCache: dict
         +__init__()
         +startManager()
         +stopManager()
-        +getLatestActuatorDataResponseFromCache(name) ActuatorData
-        +getLatestSensorDataFromCache(name) SensorData
-        +getLatestSystemPerformanceDataFromCache(name) SystemPerformanceData
+        +handleIncomingMessage(resourceEnum, msg) bool
         +handleActuatorCommandMessage(data) ActuatorData
         +handleActuatorCommandResponse(data) bool
-        +handleIncomingMessage(resource, msg) bool
         +handleSensorMessage(data) bool
         +handleSystemPerformanceMessage(data) bool
-        -_handleSensorDataAnalysis(data)
-        -_handleUpstreamTransmission(resourceName, msg)
+    }
+
+    %% Supporting Classes
+    class ConfigUtil {
+        +getProperty(section, key, default) str
+        +getInteger(section, key, default) int
+        +getBoolean(section, key) bool
     }
 
     class ResourceNameEnum {
         <<enumeration>>
-        CDA_MGMT_STATUS_MSG_RESOURCE
-        CDA_ACTUATOR_CMD_RESOURCE
-        CDA_SENSOR_MSG_RESOURCE
-        CDA_SYSTEM_PERF_MSG_RESOURCE
-        GDA_MGMT_STATUS_MSG_RESOURCE
-        GDA_ACTUATOR_CMD_RESOURCE
-        GDA_SENSOR_MSG_RESOURCE
+        +CDA_ACTUATOR_CMD_RESOURCE
+        +CDA_SENSOR_MSG_RESOURCE
+        +CDA_SYSTEM_PERF_MSG_RESOURCE
+        +CDA_MGMT_STATUS_MSG_RESOURCE
+        +value: str
     }
 
-    class ConfigConst {
-        <<constant>>
-        ENABLE_MQTT_CLIENT_KEY
-        DEFAULT_QOS
-        DEFAULT_MQTT_PORT
-        KEEP_ALIVE_KEY
-        HOST_KEY
-        PORT_KEY
-    }
-
+    %% Data Classes
     class ActuatorData {
         -name: str
         -typeID: int
         -timeStamp: str
         -statusCode: int
-        -hasError: bool
         -command: int
         -value: float
-        +setCommand(command)
+        +setCommand(cmd)
         +getCommand() int
-        +setValue(value)
+        +setValue(val)
         +getValue() float
     }
 
@@ -127,10 +120,8 @@ classDiagram
         -name: str
         -typeID: int
         -timeStamp: str
-        -statusCode: int
-        -hasError: bool
         -value: float
-        +setValue(value)
+        +setValue(val)
         +getValue() float
     }
 
@@ -138,7 +129,6 @@ classDiagram
         -name: str
         -typeID: int
         -timeStamp: str
-        -statusCode: int
         -cpuUtil: float
         -memUtil: float
         +setCpuUtilization(util)
@@ -154,81 +144,222 @@ classDiagram
         +jsonToSystemPerformanceData(jsonData) SystemPerformanceData
     }
 
-    class ConfigUtil {
-        +getProperty(section, key, default) str
-        +getInteger(section, key, default) int
-        +getFloat(section, key, default) float
-        +getBoolean(section, key) bool
+    %% Manager Classes
+    class SystemPerformanceManager {
+        +startManager()
+        +stopManager()
+        +handleTelemetry()
     }
 
-    IPubSubClient <|.. MqttClientConnector
-    IDataMessageListener <|.. DeviceDataManager
-    DeviceDataManager --> MqttClientConnector
-    DeviceDataManager --> SystemPerformanceManager
-    DeviceDataManager --> SensorAdapterManager
-    DeviceDataManager --> ActuatorAdapterManager
-    MqttClientConnector --> ConfigUtil
-    MqttClientConnector --> IDataMessageListener
-    DeviceDataManager --> ConfigUtil
-    DeviceDataManager --> ActuatorData
-    DeviceDataManager --> SensorData
-    DeviceDataManager --> SystemPerformanceData
-    MqttClientConnector --> ResourceNameEnum
-    DeviceDataManager --> ResourceNameEnum
-    DataUtil --> ActuatorData
-    DataUtil --> SensorData
-    DataUtil --> SystemPerformanceData
+    class SensorAdapterManager {
+        +startManager()
+        +stopManager()
+    }
+
+    class ActuatorAdapterManager {
+        +sendActuatorCommand(data) ActuatorData
+    }
+
+    %% Relationships
+    IPubSubClient <|.. MqttClientConnector : implements
+    IDataMessageListener <|.. DeviceDataManager : implements
+    
+    DeviceDataManager --> MqttClientConnector : uses
+    DeviceDataManager --> SystemPerformanceManager : manages
+    DeviceDataManager --> SensorAdapterManager : manages
+    DeviceDataManager --> ActuatorAdapterManager : manages
+    
+    MqttClientConnector --> ConfigUtil : uses
+    MqttClientConnector --> IDataMessageListener : notifies
+    MqttClientConnector --> ResourceNameEnum : uses
+    
+    DeviceDataManager --> ConfigUtil : uses
+    DeviceDataManager --> ResourceNameEnum : uses
+    DeviceDataManager --> ActuatorData : processes
+    DeviceDataManager --> SensorData : processes
+    DeviceDataManager --> SystemPerformanceData : processes
+    
+    DataUtil --> ActuatorData : serializes
+    DataUtil --> SensorData : serializes
+    DataUtil --> SystemPerformanceData : serializes
 ```
+## Tests Performed
 
+### Test 1: PIOT-CDA-06-001 - Basic Connection and Disconnection
 
-## Testing
+**Test:** `testConnectAndDisconnect()`
 
-### Unit Tests
-Run individual MQTT client tests:
+**Purpose:** Verify basic MQTT client connectivity
+
+**How to Run:**
 ```bash
-python -m pytest tests/integration/connection/test_MqttClientConnector.py -v
+# Enable only testConnectAndDisconnect in test file
+cd ~/piot/cda-python-components
+source venv/bin/activate
+export PYTHONPATH=$(pwd)
+python3 -m unittest tests.integration.connection.test_MqttClientConnector -v
 ```
 
-### Available Tests
-- testConnectAndDisconnect: Basic connection/disconnection
-- testConnectAndCDAManagementStatusPubSub: Pub/Sub to management status topic
-- testNewActuatorCmdPubSub: Actuator command pub/sub with JSON
-- testActuatorCmdPubSub: Actuator command with specific value
-- testSensorMsgPub: Sensor data publication
-- testCDAManagementStatusSubscribe: Subscribe to management commands
-- testCDAActuatorCmdSubscribe: Subscribe to actuator commands (300s)
-- testCDAManagementStatusPublish: Publish management status
+**What It Tests:**
+- MQTT client initialization with configuration
+- Successful connection to broker at localhost:1883
+- Connection persists for keepAlive period (60 seconds)
+- Clean disconnection and network loop termination
 
-### Integration Test
-Run the full CDA with MQTT:
+**Expected Result:** Test passes with ~65 second runtime
+
+---
+
+### Test 2: PIOT-CDA-06-002 - Callback Implementation Verification
+
+**Test:** `testConnectAndDisconnect()` (same test, now verifies callbacks)
+
+**Purpose:** Verify all MQTT callback handlers are properly implemented and invoked
+
+**What It Tests:**
+- `onConnect()` callback fires on successful connection
+- `onDisconnect()` callback fires on disconnection
+- All callbacks registered before connection attempt
+- Callback methods log appropriate messages
+
+**Expected Result:** Test passes with callback log messages visible
+
+---
+
+### Test 3: PIOT-CDA-06-003 - Publish/Subscribe/Unsubscribe Methods
+
+**Test:** `testConnectAndCDAManagementStatusPubSub()`
+
+**Purpose:** Verify pub/sub functionality with all callbacks
+
+**How to Run:**
 ```bash
-python programmingtheiot/cda/app/ConstrainedDeviceApp.py
+# Enable only testConnectAndCDAManagementStatusPubSub in test file
+cd ~/piot/cda-python-components
+source venv/bin/activate
+export PYTHONPATH=$(pwd)
+python3 -m unittest tests.integration.connection.test_MqttClientConnector -v
 ```
 
-Expected output:
-- MQTT client created and connected
-- Subscribed to actuator command topic
-- System performance data collected every 5 seconds
-- CDA ready to receive actuator commands via MQTT
+**What It Tests:**
+- Connection establishment
+- Topic subscription (`PIOT/ConstrainedDevice/MgmtStatusMsg`)
+- Message publishing with QoS 1
+- Message reception via `onMessage()` callback
+- Topic unsubscription
+- Clean disconnection
 
-## Environment
+**Expected Result:** 
+- All 5 callbacks fire in sequence (onConnect, onSubscribe, onMessage, onPublish, onDisconnect)
+- Test passes with ~75 second runtime
 
-- **Python:** 3.12.3
-- **Libraries:** paho-mqtt, APScheduler, psutil, numpy
-- **MQTT Broker:** Mosquitto 2.0.18
-- **Testing:** pytest, unittest
+---
 
-## Test Results
+### Test 4: PIOT-CDA-06-004 - DeviceDataManager Integration
 
-- Ran 2 tests in 140.180s
-- Status: OK (2 passed, 6 skipped)
-- MQTT connectivity verified
-- Pub/sub messaging verified
-- QoS validation verified
-- Message waiting (wait_for_publish) verified
+**Test:** `testActuatorCmdPubSub()` with running CDA application
 
-## References
+**Purpose:** Verify full end-to-end MQTT integration between test client and running CDA
 
-- [MQTT 3.1.1 Specification](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html)
-- [Paho Python Client](https://github.com/eclipse/paho.mqtt.python)
-- Programming the Internet of Things - Chapter 6
+**How to Run:**
+
+**Terminal 1 - Start CDA:**
+```bash
+cd ~/piot/cda-python-components
+source venv/bin/activate
+export PYTHONPATH=$(pwd)
+python3 programmingtheiot/cda/app/ConstrainedDeviceApp.py
+```
+
+**Terminal 2 - Run Integration Test:**
+```bash
+cd ~/piot/cda-python-components
+source venv/bin/activate
+export PYTHONPATH=$(pwd)
+# Enable only testActuatorCmdPubSub in test file
+python3 -m unittest tests.integration.connection.test_MqttClientConnector -v
+```
+
+**What It Tests:**
+- CDA subscribes to `PIOT/ConstrainedDevice/ActuatorCmd` topic on startup
+- Test client (using different client ID) publishes ActuatorData JSON
+- CDA receives and processes the actuator command message
+- DeviceDataManager's `handleIncomingMessage()` is invoked
+- Message contains command value of 7
+- No client ID conflicts between test and CDA
+
+**Expected Result:**
+- Test terminal shows ActuatorData encoding and message publication
+- CDA terminal shows message reception with full JSON payload
+- Both clients operate independently without conflicts
+
+---
+
+
+## Implementation Summary
+
+### 1. **MqttClientConnector** (`programmingtheiot/cda/connection/MqttClientConnector.py`)
+
+A complete MQTT client implementation that provides:
+
+**Core Functionality:**
+- Connection management with configurable broker settings
+- Topic-based publish/subscribe messaging
+- QoS (Quality of Service) level validation and enforcement
+- Data message listener integration for forwarding received messages
+- Comprehensive callback handlers for MQTT events
+
+**Key Methods Implemented:**
+- `__init__(clientID)` - Initializes MQTT client with configuration from PiotConfig.props
+- `connectClient()` - Establishes connection to MQTT broker and starts network loop
+- `disconnectClient()` - Cleanly disconnects from broker and stops network loop
+- `publishMessage(resource, msg, qos)` - Publishes messages to specified topics with QoS validation
+- `subscribeToTopic(resource, callback, qos)` - Subscribes to topics with QoS validation
+- `unsubscribeFromTopic(resource)` - Unsubscribes from topics
+- `setDataMessageListener(listener)` - Registers message listener for incoming message handling
+
+**Callback Handlers:**
+- `onConnect()` - Handles successful connection events
+- `onDisconnect()` - Handles disconnection events
+- `onMessage()` - Processes incoming messages and forwards to data listener
+- `onPublish()` - Confirms message publication
+- `onSubscribe()` - Confirms topic subscription
+
+**Configuration:**
+- Reads broker host, port, and keepAlive from config file
+- Supports custom client IDs (parameter takes precedence over config)
+- Validates QoS levels (0-2), defaults to ConfigConst.DEFAULT_QOS for invalid values
+- Uses Eclipse Paho MQTT Python client library
+
+---
+
+### 2. **DeviceDataManager Integration** (`programmingtheiot/cda/app/DeviceDataManager.py`)
+
+**Modifications:**
+- Added MQTT client initialization in constructor
+- Checks `enableMqttClient` flag from configuration
+- Registers DeviceDataManager as data message listener
+- Implements `handleIncomingMessage()` callback for processing received MQTT messages
+
+**Lifecycle Management:**
+- `startManager()` - Connects to MQTT broker and subscribes to `CDA_ACTUATOR_CMD_RESOURCE` topic with 1-second connection delay
+- `stopManager()` - Unsubscribes from topics and disconnects from broker
+
+---
+
+## Testing Best Practices
+
+1. **Always clear Python cache** before running tests:
+   ```bash
+   find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+   ```
+
+2. **Ensure MQTT broker is running** before all integration tests
+
+3. **Use unique client IDs** for concurrent clients to avoid broker conflicts
+
+4. **Enable one test at a time** by commenting/uncommenting `@unittest.skip()` decorators
+
+5. **For integration tests**, run CDA in one terminal and tests in another
+
+---

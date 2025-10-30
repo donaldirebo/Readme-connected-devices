@@ -68,18 +68,13 @@ classDiagram
     DataUtil ..> SystemPerformanceData : converts
 ```
 ## Running Tests
+- ActuatorDataTest
+- SensorDataTest
+- SystemPerformanceDataTest
 
-### Maven Command Line
-```bash
-cd ~/piot/gda-java-components
-mvn test -Dtest=DataUtilTest
-```
-
-### Eclipse
-1. Expand `src/test/java/programmingtheiot/unit/data/`
-2. Right-click `DataUtilTest.java`
-3. Run As → JUnit Test
-4. Check JUnit tab for green bar
+- SystemPerformanceManagerTest
+- DeviceDataManagerNoCommsTest
+- GatewayDeviceAppTest
 
 ## Design Patterns
 
